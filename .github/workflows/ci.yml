@@ -22,7 +22,7 @@ jobs:
             runner: macos-latest
             install_homebrew: false
           - name: macos-x86_64
-            runner: macos-13
+            runner: macos-15-intel
             install_homebrew: false
 
     steps:

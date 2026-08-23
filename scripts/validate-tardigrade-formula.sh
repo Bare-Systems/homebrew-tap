@@ -39,6 +39,27 @@ if ! command -v brew >/dev/null 2>&1; then
     exit 1
 fi
 
+formula_installed=false
+tap_added=false
+tmpdir=""
+pid=""
+
+# shellcheck disable=SC2317,SC2329 # invoked by trap
+cleanup() {
+    if [ -n "$pid" ]; then
+        kill "$pid" 2>/dev/null || true
+        wait "$pid" 2>/dev/null || true
+    fi
+    if [ "$formula_installed" = true ]; then
+        brew uninstall --formula "$tap_name/tardigrade" >/dev/null 2>&1 || true
+    fi
+    if [ "$tap_added" = true ]; then
+        brew untap "$tap_name" >/dev/null 2>&1 || true
+    fi
+    [ -z "$tmpdir" ] || rm -rf "$tmpdir"
+}
+trap cleanup EXIT
+
 os="$(uname -s)"
 machine="$(uname -m)"
 
@@ -78,8 +99,10 @@ if ! awk -v platform="$platform_block" -v arch="$arch_block" '
 fi
 
 brew tap "$tap_name" "$repo_root"
+tap_added=true
 brew audit --formula "$tap_name/tardigrade"
 brew install "$tap_name/tardigrade"
+formula_installed=true
 brew test "$tap_name/tardigrade"
 
 tardi_bin="$(brew --prefix)/bin/tardi"
@@ -122,16 +145,6 @@ case "$os" in
 esac
 
 tmpdir="$(mktemp -d)"
-# shellcheck disable=SC2317,SC2329 # invoked by trap
-cleanup() {
-    if [ -n "${pid:-}" ]; then
-        kill "$pid" 2>/dev/null || true
-        wait "$pid" 2>/dev/null || true
-    fi
-    rm -rf "$tmpdir"
-}
-trap cleanup EXIT
-
 mkdir -p "$tmpdir/public"
 printf 'ok\n' > "$tmpdir/public/index.html"
 
