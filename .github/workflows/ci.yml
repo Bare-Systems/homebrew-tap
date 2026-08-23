@@ -6,42 +6,35 @@ on:
 
 jobs:
   tardigrade-formula:
-    name: Tardigrade formula
-    runs-on: ubuntu-latest
+    name: Tardigrade formula (${{ matrix.name }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            runner: ubuntu-latest
+            install_homebrew: true
+          - name: linux-aarch64
+            runner: ubuntu-24.04-arm
+            install_homebrew: true
+          - name: macos-arm64
+            runner: macos-latest
+            install_homebrew: false
+          - name: macos-x86_64
+            runner: macos-13
+            install_homebrew: false
+
     steps:
       - name: Check out tap
         uses: actions/checkout@v4
 
-      - name: Install Homebrew
+      - name: Install Homebrew on Linux
+        if: matrix.install_homebrew
         run: |
           NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
           echo "/home/linuxbrew/.linuxbrew/bin" >> "$GITHUB_PATH"
           echo "/home/linuxbrew/.linuxbrew/sbin" >> "$GITHUB_PATH"
 
-      - name: Validate formula syntax
-        run: ruby -c Formula/tardigrade.rb
-
-      - name: Tap local checkout
-        run: brew tap Bare-Systems/tap "$GITHUB_WORKSPACE"
-
-      - name: Audit formula
-        run: brew audit --formula Bare-Systems/tap/tardigrade
-
-      - name: Install formula
-        run: brew install Bare-Systems/tap/tardigrade
-
-      - name: Verify installed commands
-        run: |
-          command -v tardi
-          command -v tardigrade
-          tardi version
-          tardigrade version
-
-      - name: Verify native dependency contract
-        run: |
-          linked="$(ldd "$(command -v tardi)")"
-          printf '%s\n' "$linked"
-          ! printf '%s\n' "$linked" | grep -E 'lib(ssl|crypto)\.so'
-
-      - name: Run Homebrew test
-        run: brew test Bare-Systems/tap/tardigrade
+      - name: Validate checked-in Tardigrade formula
+        run: scripts/validate-tardigrade-formula.sh
