@@ -1,66 +1,70 @@
 # Bare Systems Homebrew Tap
 
-Homebrew formulas for Bare Systems projects.
+This repository is the public Homebrew publication surface for Bare Systems
+formulae.
 
 ## Tardigrade
 
-The tap currently publishes the Linux Homebrew formula for Tardigrade `0.5.0`,
-using the release archives and SHA-256 values from
-[`tardigrade-checksums.txt`](https://github.com/Bare-Systems/Tardigrade/releases/download/v0.5.0/tardigrade-checksums.txt).
+Tardigrade Homebrew installation is not publicly supported yet. The latest
+published Tardigrade release does not satisfy the native release-backed
+Homebrew contract from `Bare-Systems/Tardigrade` issue #466, so this tap must
+not advertise the old release as installable.
+
+Once a qualifying native release has been published and this tap's CI passes
+against the generated formula, the public install path will be:
 
 ```bash
 brew tap Bare-Systems/tap
 brew install tardigrade
-
-tardi version
 ```
 
-The canonical executable is `tardi`. The formula also installs the release
-archive's `tardigrade` compatibility executable while that alias remains part of
-Tardigrade packaging.
+The installed canonical executable is `tardi`. The `tardigrade` command remains
+a compatibility alias only while current Tardigrade packaging promises it.
 
-macOS formula branches are intentionally absent until Tardigrade publishes real
-`tardigrade-darwin-x86_64.tar.gz` and `tardigrade-darwin-arm64.tar.gz` release
-archives with manifest checksums. The formula does not depend on `openssl@3`;
-native release artifacts are expected to satisfy Tardigrade's runtime TLS
-contract without a Homebrew OpenSSL runtime dependency.
+Tardigrade does not have a Homebrew `openssl@3` runtime dependency. Native
+release artifacts are expected to satisfy Tardigrade's TLS contract without
+linking the installed `tardi` binary against Homebrew OpenSSL.
 
 ## Formula Ownership
 
-This tap is the public Homebrew installation surface for released Tardigrade
-artifacts. Formula updates are generated from one Tardigrade release at a time:
+`Bare-Systems/Tardigrade` owns formula generation. This tap receives and reviews
+the generated publication artifact; it is not a second implementation of release
+asset discovery, checksum selection, or formula rendering.
 
-1. Tardigrade publishes release archives and `tardigrade-checksums.txt`.
-2. `scripts/update-tardigrade-formula.rb` reads that release and rewrites
-   `Formula/tardigrade.rb` deterministically.
-3. The tap CI installs the formula and runs the Homebrew test on Linux.
-4. The rendered formula is reviewed and merged in this repository.
+The intended release-to-tap flow is:
 
-Do not hand-edit version, URL, or checksum values independently from the release
-manifest.
-
-## Updating Tardigrade
-
-Render the latest Tardigrade formula:
-
-```bash
-scripts/update-tardigrade-formula.rb
+```text
+Bare-Systems/Tardigrade release
+    -> Tardigrade/scripts/update-homebrew-formula.sh
+    -> Tardigrade/packaging/homebrew/tardigrade.rb
+    -> Bare-Systems/homebrew-tap/Formula/tardigrade.rb
+    -> tap CI
+    -> public Homebrew installation
 ```
 
-Render a specific release:
+For a future release, run the canonical updater from a checked-out Tardigrade
+repository:
 
 ```bash
-scripts/update-tardigrade-formula.rb v0.5.0
+./scripts/update-homebrew-formula.sh \
+  --tag vX.Y.Z \
+  --tap-dir ../homebrew-tap
 ```
 
-Then run:
+Then review the tap diff and run tap validation before opening the tap PR:
 
 ```bash
-ruby -c Formula/tardigrade.rb
-brew tap Bare-Systems/tap "$PWD"
-brew audit --formula Bare-Systems/tap/tardigrade
-brew test Bare-Systems/tap/tardigrade
+scripts/validate-tardigrade-formula.sh
 ```
 
-`brew test` requires a Linux host for the currently published formula because no
-macOS release archives are available yet.
+Do not hand-edit formula versions, URLs, checksums, or platform branches in this
+repository. They must come from one published Tardigrade release and pass the
+native inventory checks performed by Tardigrade's updater.
+
+## Current Follow-Up
+
+The merged Tardigrade updater currently copies
+`packaging/homebrew/tap-README.md` when `--tap-dir` is used. This tap README is
+intentionally stable and tap-owned; the Tardigrade updater should be changed to
+sync only the generated formula, or otherwise avoid replacing this public README
+with release-specific preparatory text.
